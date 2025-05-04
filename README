@@ -1,0 +1,8 @@
+AI Texas Hold'em Poker Agent
+
+This project implements an intelligent Texas Hold'em Poker agent using Python. The goal is to simulate human-like poker behavior with decision-making based on hand strength, probabilistic outcomes, and bluffing strategies.
+
+Project Overview
+
+This project was created as a capstone for CPSC 481 - Artificial Intelligence. It is developed by Michael Baldo, Chris Hilton, and Jonathan Fagoaga. The agent will simulate basic to intermediate-level play in a Texas Hold'em (2-player) scenarios.
+
