@@ -2,6 +2,7 @@ from deuces import Card, Deck, Evaluator
 import random
 from bluffing_module import should_bluff
 import os
+from opponent_modeling import OpponentModel
 
 # Get the absolute path to the directory this script is in
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -167,10 +168,31 @@ last_player_bet = 20
 # Function returns: ('raise', 30)
 --------------------
 """
+from opponent_modeling import OpponentModel
+
 def make_ai_decision(ai_hand, community_cards, player_action, pot_size=0, stage="Flop", last_player_bet=20):
     evaluator = Evaluator()
     board = convert_hand(community_cards)
     hand = convert_hand(ai_hand)
+    opponent_model = OpponentModel()
+    player_id = 1  # Assuming player_id is 1 for the human player
+    playstyle = opponent_model.predict_playstyle(player_id)
+
+    # Adjust thresholds based on playstyle
+    win_rate_threshold = 0.75
+    bluff_aggression = 0.9
+    if playstyle == 'aggressive':
+        win_rate_threshold = 0.8  # Require stronger hand to call
+        bluff_aggression = 0.7    # Bluff less often
+    elif playstyle == 'passive':
+        win_rate_threshold = 0.7  # Call with weaker hands
+        bluff_aggression = 1.0    # Bluff more often
+    elif playstyle == 'tight':
+        win_rate_threshold = 0.7
+        bluff_aggression = 1.0
+    elif playstyle == 'loose':
+        win_rate_threshold = 0.8
+        bluff_aggression = 0.7
 
     # --- Pre-Flop Logic ---
     if len(community_cards) < 3:
@@ -181,26 +203,27 @@ def make_ai_decision(ai_hand, community_cards, player_action, pot_size=0, stage=
             if random.random() < 0.3 or score > 60:
                 print("DEBUG: Pre-flop aggression — AI chooses to bet.")
                 bluff_stats["total_bluffs"] += 1
-                bluff_stats["successful_bluffs"] += 1  # assumed success when player checked
+                bluff_stats["successful_bluffs"] += 1
                 log_path = os.path.join(SCRIPT_DIR, "ai_bluff_log.txt")
                 with open(log_path, "a", encoding="utf-8") as log:
                     log.write(f"Bluff on Pre-Flop: AI Hand = {ai_hand}, Player checked, Score = {score}\n")
                 return ('bet', 20)
             return ('check', 0)
-
         else:
-            return (random.choice(['call', 'fold']), 0)
+            if playstyle == 'aggressive' and score < 50:
+                return ('fold', 0)
+            return ('call', 0)
 
     # --- Post-Flop Logic with Monte Carlo ---
     win_rate = monte_carlo_win_rate(ai_hand, community_cards)
     print(f"DEBUG: Monte Carlo estimated win rate = {win_rate:.2f}")
 
     if player_action == 'check':
-        if win_rate > 0.7:
+        if win_rate > win_rate_threshold:
             return ('check', 0)
         elif win_rate > 0.4:
             return random.choice([('check', 0), ('bet', 30)])
-        elif should_bluff(7000, pot_size, stage):
+        elif should_bluff(7000, pot_size, stage, aggression_level=bluff_aggression):
             print("DEBUG: AI decided to bluff after check.")
             bluff_stats["total_bluffs"] += 1
             bluff_stats["successful_bluffs"] += 1
@@ -212,9 +235,9 @@ def make_ai_decision(ai_hand, community_cards, player_action, pot_size=0, stage=
             return ('check', 0)
 
     elif player_action == 'bet':
-        if win_rate > 0.75:
+        if win_rate > win_rate_threshold:
             return ('call', 0)
-        elif should_bluff(7000, pot_size, stage):
+        elif should_bluff(7000, pot_size, stage, aggression_level=bluff_aggression):
             bluff_raise = max(int(last_player_bet * 1.5), int(pot_size * 0.1), 10)
             print(f"DEBUG: Player bet detected. AI decides to bluff (raise to {bluff_raise}).")
             bluff_stats["total_bluffs"] += 1
