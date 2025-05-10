@@ -40,3 +40,15 @@ Bluff after player check on River: AI Hand = ['Q♦', '8♠'], Pot = 3060
 Bluff in response to player bet on Flop: AI Hand = ['3♠', 'J♣'], Pot = 90, Raise = 75
 Bluff after player check on Turn: AI Hand = ['3♠', 'J♣'], Pot = 190
 Bluff in response to player bet on River: AI Hand = ['3♠', 'J♣'], Pot = 10250, Raise = 15000
+Bluff in response to player bet on Flop: AI Hand = ['J♦', 'K♦'], Pot = 6, Raise = 10
+Bluff in response to player bet on Turn: AI Hand = ['J♦', 'K♦'], Pot = 28, Raise = 10
+Bluff after player check on River: AI Hand = ['J♦', 'K♦'], Pot = 42
+Bluff in response to player bet on Flop: AI Hand = ['5♦', '8♣'], Pot = 30, Raise = 30
+Bluff in response to player bet on Turn: AI Hand = ['5♦', '8♣'], Pot = 72, Raise = 10
+Bluff in response to player bet on Flop: AI Hand = ['8♣', '8♦'], Pot = 47, Raise = 10
+Bluff in response to player bet on Flop: AI Hand = ['6♣', '6♦'], Pot = 11, Raise = 10
+Bluff in response to player bet on Flop: AI Hand = ['6♣', '4♦'], Pot = 12, Raise = 10
+Bluff in response to player bet on Flop: AI Hand = ['Q♠', '3♠'], Pot = 15, Raise = 10
+Bluff after player check on River: AI Hand = ['Q♠', '3♠'], Pot = 90
+Bluff in response to player bet on Flop: AI Hand = ['9♥', '2♥'], Pot = 13, Raise = 10
+Bluff in response to player bet on Turn: AI Hand = ['9♥', '2♥'], Pot = 82, Raise = 81

@@ -2,6 +2,7 @@ from deuces import Card, Deck, Evaluator
 import random
 from bluffing_module import should_bluff
 from decision_engine import make_ai_decision, convert_hand, determine_ai_bet_amount, evaluate_strength, bluff_stats
+from opponent_modeling import OpponentModel
 
 # Define card suits and ranks for deck creation
 suits = ['♠', '♥', '♦', '♣']
@@ -55,8 +56,7 @@ def betting_round(player_hand, ai_hand, community_cards, pot, stage):
 
     player_action = player_decision()
     player_bet = 0
-
-    # If player bets, prompt for bet amount
+    
     if player_action == 'bet':
         while True:
             try:
@@ -67,70 +67,62 @@ def betting_round(player_hand, ai_hand, community_cards, pot, stage):
             except ValueError:
                 print("Please enter a valid number.")
 
-    # Handle player folding immediately
     if player_action == 'fold':
         print("You folded. AI wins the pot.")
-        return 'fold', pot
+        return 'fold', pot, player_action, player_bet
 
-    # Let the AI make its move based on context
     ai_action, ai_amount = make_ai_decision(
-        ai_hand,
-        community_cards,
-        player_action,
-        pot_size=pot + player_bet,
-        stage=stage,
-        last_player_bet=player_bet
+        ai_hand, community_cards, player_action, pot_size=pot + player_bet,
+        stage=stage, last_player_bet=player_bet
     )
 
     print(f"AI chooses to {ai_action}.")
 
-    # If both players check
     if player_action == 'check' and ai_action == 'check':
         print("Both players check.")
+        return 'continue', pot, player_action, player_bet
 
-    # If player checks and AI bets, prompt player to respond
     elif player_action == 'check' and ai_action == 'bet':
         print(f"AI bets {ai_amount} chips.")
         response = input("AI bet — do you want to call or fold? ").lower()
         while response not in ['call', 'fold']:
             response = input("Please enter 'call' or 'fold': ").lower()
         if response == 'call':
-            pot += ai_amount * 2  # Match AI bet
-            bluff_stats["failed_bluffs"] += 1  # Assume AI bluff failed (called)
+            pot += ai_amount * 2
+            bluff_stats["failed_bluffs"] += 1
+            return 'continue', pot, 'call', ai_amount
         else:
             print("You folded. AI wins the pot.")
-            return 'fold', pot
+            return 'fold', pot, 'fold', 0
 
-    # If AI folds to player action
     elif ai_action == 'fold':
         print("AI folded. You win the pot!")
-        return 'win', pot
+        return 'win', pot, player_action, player_bet
 
-    # If player bets and AI simply calls
     elif player_action == 'bet' and ai_action == 'call':
-        pot += 2 * player_bet  # Both player and AI contributed equally
+        pot += 2 * player_bet
+        return 'continue', pot, player_action, player_bet
 
-    # If AI raises in response to player's bet
     elif player_action == 'bet' and ai_action == 'raise':
         print(f"AI raises to {ai_amount} chips.")
         response = input("AI raised — do you want to call or fold? ").lower()
         while response not in ['call', 'fold']:
             response = input("Please enter 'call' or 'fold': ").lower()
         if response == 'call':
-            call_amount = ai_amount - player_bet  # Extra needed to match raise
-            pot += player_bet + call_amount + ai_amount  # Total contributions
-            bluff_stats["failed_bluffs"] += 1  # AI bluff called
+            call_amount = ai_amount - player_bet
+            pot += player_bet + call_amount + ai_amount
+            bluff_stats["failed_bluffs"] += 1
+            return 'continue', pot, 'call', call_amount
         else:
             print("You folded. AI wins the pot.")
-            bluff_stats["successful_bluffs"] += 1  # Bluff succeeded
-            return 'fold', pot
+            bluff_stats["successful_bluffs"] += 1
+            return 'fold', pot, 'fold', 0
 
-    # Fallback: AI folds to player's bet (not call or raise)
     elif player_action == 'bet' and ai_action != 'call':
         print("AI folded to your bet. You win the pot!")
-        return 'win', pot
+        return 'win', pot, player_action, player_bet
 
-    return 'continue', pot
+    return 'continue', pot, player_action, player_bet
 
 # Compare hands and declare a winner
 def showdown(player_hand, ai_hand, community_cards, pot):
@@ -158,7 +150,12 @@ def showdown(player_hand, ai_hand, community_cards, pot):
         print("It's a tie!")
 
 # Play through a single round of Texas Hold'em
+from opponent_modeling import OpponentModel
+
 def play_round():
+    # Initialize opponent model
+    opponent_model = OpponentModel()
+    player_id = 1  # Define a player ID
     deck = create_deck()
     shuffle_deck(deck)
 
@@ -167,23 +164,31 @@ def play_round():
     ai_hand = deal_hand(deck)
 
     # Pre-flop betting
-    state, pot = betting_round(player_hand, ai_hand, [], pot, "Pre-Flop")
-    if state != 'continue': return
+    state, pot, player_action, player_bet = betting_round(player_hand, ai_hand, [], pot, "Pre-Flop")
+    opponent_model.update_opponent_data(player_hand, [], "Pre-Flop", player_action, player_bet, pot, player_id)
+    if state != 'continue':
+        return
 
     # Flop betting
     flop = deal_flop(deck)
-    state, pot = betting_round(player_hand, ai_hand, flop, pot, "Flop")
-    if state != 'continue': return
+    state, pot, player_action, player_bet = betting_round(player_hand, ai_hand, flop, pot, "Flop")
+    opponent_model.update_opponent_data(player_hand, flop, "Flop", player_action, player_bet, pot, player_id)
+    if state != 'continue':
+        return
 
     # Turn betting
     turn = deal_turn(deck)
-    state, pot = betting_round(player_hand, ai_hand, flop + [turn], pot, "Turn")
-    if state != 'continue': return
+    state, pot, player_action, player_bet = betting_round(player_hand, ai_hand, flop + [turn], pot, "Turn")
+    opponent_model.update_opponent_data(player_hand, flop + [turn], "Turn", player_action, player_bet, pot, player_id)
+    if state != 'continue':
+        return
 
     # River betting
     river = deal_river(deck)
-    state, pot = betting_round(player_hand, ai_hand, flop + [turn, river], pot, "River")
-    if state != 'continue': return
+    state, pot, player_action, player_bet = betting_round(player_hand, ai_hand, flop + [turn, river], pot, "River")
+    opponent_model.update_opponent_data(player_hand, flop + [turn, river], "River", player_action, player_bet, pot, player_id)
+    if state != 'continue':
+        return
 
     # Final hand comparison
     community_cards = flop + [turn, river]

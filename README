@@ -13,7 +13,6 @@ ai-texas-holdem/
 ├── bluffing_module.py      # Bluff strategy logic
 ├── opponent_modeling.py    # Simple player profiling from history
 ├── hand_evaluator/         # Integrated Deuces hand evaluator
-├── data/
-│   └── poker_hands.csv     # (Optional) CSV data for opponent modeling
+│── poker_hands.csv         # CSV data for opponent modeling
 └── README.md               # Project documentation 
 
